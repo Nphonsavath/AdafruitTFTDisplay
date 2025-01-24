@@ -1,3 +1,4 @@
+#include <string.h>
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <Adafruit_GFX.h>
@@ -25,12 +26,14 @@
 #define TS_MAXY 320
 #define TS_THRESHOLD 200
 
-#define SCAN_NETWORK_X 35
-#define SCAN_NETWORK_Y 50
+#define BUTTON_X 35
+#define BUTTON_Y 50
 #define BUTTON_W 250
 #define BUTTON_H 50
+#define MAX_SSID_LENGTH 12
 
-int currentPage = 0;
+int arduinoState = 0;
+int networkPage = 0;
 
 // Create display object
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RESET, TFT_MISO);
@@ -42,8 +45,8 @@ void setup() {
   while (!Serial) {
     ;
   }
-  if (currentPage == 0) {
-    displayNetworkPage();
+  if (arduinoState == 0) {
+    initializeNetworkPage();
   }
 }
 
@@ -53,8 +56,9 @@ void loop() {
   if (touch.z > TS_THRESHOLD) {
     int x = map(touch.x, TS_MINX, TS_MAXX, 0, tft.width());
     int y = map(touch.y, TS_MINY, TS_MAXY, 0, tft.height());
-    if (isButtonPressed(x, y, SCAN_NETWORK_X, SCAN_NETWORK_Y, BUTTON_W, BUTTON_H)) {
-      scanNearbyNetworks();
+    if (isButtonPressed(x, y, BUTTON_X, BUTTON_Y, BUTTON_W, BUTTON_H)) {
+      int numSsid = scanNearbyNetworks();
+      drawNetworksPage(numSsid);
     }
     delay(500);
   }
@@ -70,18 +74,15 @@ bool isButtonPressed(int touchX, int touchY, int buttonX, int buttonY, int butto
   }
 }
 
-void displayNetworkPage() {
-  initializeTFT();
-  drawNetworksPage();
-  checkWifiModule();
-  printMACAddress();
-  listNetworksToTFT();
-}
-
-void initializeTFT() {
+void initializeNetworkPage() {
   tft.begin();
   tft.setRotation(1); // Portrait orientation
   tft.fillScreen(ILI9341_BLACK);
+
+  checkWifiModule();
+  printMACAddress();
+  drawTitle();
+  drawButton(45, 55, BUTTON_X, BUTTON_Y-5, BUTTON_W, BUTTON_H-10, ILI9341_BLUE, 3, "Scan Networks");
 }
 
 void drawTitle() {
@@ -110,54 +111,48 @@ void printMACAddress() {
   printMacAddressToTFT(mac);
 }
 
-void listNetworksToTFT() {
-  // Clear previous network list
-  //tft.fillRect(0, 120, 320, 200, ILI9341_BLACK);
-  //tft.setCursor(10, 70);
-  //tft.setTextColor(ILI9341_WHITE);
-  //tft.setTextSize(3);
-
-  // Scan for nearby networks
-  int numSsid = scanNearbyNetworks();
-
-  // Display networks
-  for (int thisNet = 0; thisNet < numSsid; thisNet++) {
-    tft.setTextColor(ILI9341_WHITE);
-    tft.setTextSize(2);
-    //tft.print(thisNet + 1);
-    //tft.print(") ");
-    tft.print(WiFi.SSID(thisNet));
-    //tft.print(" (");
-    // tft.print(WiFi.RSSI(thisNet)); //prints network signal strength
-    // tft.print(" dBm) ");
-
-    //tft.setTextColor(ILI9341_CYAN); //prints network encription
-    //printEncryptionTypeToTFT(WiFi.encryptionType(thisNet));
+void drawNetworksPage(int numSsid) {
+  drawTitle();
+  if (networkPage == 0) {
+    for (int thisNet = 0; thisNet < 3; thisNet++) {
+      int offset = ((thisNet+1)*45);
+      String wifiName = WiFi.SSID(thisNet);
+      if (wifiName.length() > MAX_SSID_LENGTH) {
+        wifiName = wifiName.substring(0, MAX_SSID_LENGTH) + "...";
+      }
+      drawButton(45, 75 + offset, BUTTON_X, 60 + offset, BUTTON_W, BUTTON_H-10, ILI9341_DARKGREY, 2, wifiName);
+      tft.setTextColor(ILI9341_CYAN); //prints network encription
+      tft.setTextSize(1);
+      tft.setCursor(233, 70 + offset);
+      tft.print(WiFi.RSSI(thisNet)); //prints network signal strength
+      tft.print(" dBm");
+      tft.setCursor(233, 85 + offset);
+      printEncryptionTypeToTFT(WiFi.encryptionType(thisNet));
+    }
   }
+  
 }
 
-void drawNetworksPage() {
-  drawTitle();
-
-  tft.fillRect(SCAN_NETWORK_X, SCAN_NETWORK_Y, BUTTON_W, BUTTON_H, ILI9341_BLUE);
-  tft.drawRect(SCAN_NETWORK_X, SCAN_NETWORK_Y, BUTTON_W, BUTTON_H, ILI9341_WHITE);
-  tft.setTextSize(3);
-  tft.setCursor(45, 65);
+void drawButton(int x, int y, int buttonX, int buttonY, int buttonW, int buttonH, int textColour, int textSize, String text) {
+  tft.fillRect(buttonX, buttonY, buttonW, buttonH, textColour);
+  tft.drawRect(buttonX, buttonY, buttonW, buttonH, ILI9341_WHITE);
+  tft.setTextSize(textSize);
+  tft.setCursor(x, y);
   tft.setTextColor(ILI9341_WHITE);
-  tft.print("Scan Networks");
-
-
+  tft.print(text);
+  return;
 }
 
 int scanNearbyNetworks() {
   int numSsid = WiFi.scanNetworks();
-  tft.setTextSize(2);
-  tft.setCursor(55, 110);
+  tft.setTextSize(1);
+  tft.setCursor(100, 90);
   if (numSsid == -1) {
     tft.setTextColor(ILI9341_RED);
     tft.print("No networks found!");
     return 0;
   } else {
+    tft.setTextColor(ILI9341_WHITE);
     tft.print("List of Networks");
   }
   return numSsid;
@@ -166,22 +161,22 @@ int scanNearbyNetworks() {
 void printEncryptionTypeToTFT(int thisType) {
   switch (thisType) {
     case ENC_TYPE_WEP:
-      tft.println("WEP");
+      tft.print("WEP");
       break;
     case ENC_TYPE_TKIP:
-      tft.println("WPA");
+      tft.print("WPA");
       break;
     case ENC_TYPE_CCMP:
-      tft.println("WPA2");
+      tft.print("WPA2");
       break;
     case ENC_TYPE_NONE:
-      tft.println("Open");
+      tft.print("Open");
       break;
     case ENC_TYPE_AUTO:
-      tft.println("Auto");
+      tft.print("Auto");
       break;
     default:
-      tft.println("Unknown");
+      tft.print("Unknown");
       break;
   }
 }
