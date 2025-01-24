@@ -20,10 +20,10 @@
 #define XP A3
 
 // Touchscreen calibration settings
-#define TS_MINX 0
-#define TS_MAXX 320
-#define TS_MINY 0
-#define TS_MAXY 240
+#define TS_MINX 151
+#define TS_MINY 146
+#define TS_MAXX 869
+#define TS_MAXY 881
 #define TS_THRESHOLD 300
 
 #define BUTTON_X 35
@@ -55,23 +55,49 @@ void loop() {
   TSPoint touch = ts.getPoint();
   
   if (touch.z > TS_THRESHOLD) {
-    int x = map(touch.x, TS_MINX, TS_MAXX, 0, 320);
-    int y = map(touch.y, TS_MINY, TS_MAXY, 0, 240);
+    int screen_width = tft.width();  // Example: 240 (for ILI9341)
+    int screen_height = tft.height(); // Example: 320 (for ILI9341)
+    // Serial.print("Screen_width: ");
+    // Serial.print(screen_width);
+    // Serial.print(" Screen_height: ");
+    // Serial.print(screen_height);
+    // Serial.print(" TS_MINX: ");
+    // Serial.print(map(0, screen_width, touch.x, 0, screen_width));
+    // Serial.print(" TS_MAXX: ");
+    // Serial.print(map(screen_width, 0, touch.x, 0, screen_width));
+    // Serial.print(" TS_MINY: ");
+    // Serial.print(map(0, screen_height, touch.y, 0, screen_height));
+    // Serial.print(" TS_MAXY: ");
+    // Serial.print(map(screen_height, 0, touch.y, 0, screen_height));
+    // Serial.println();
+
+    int x = map(touch.x, TS_MINX, TS_MAXX, 240, 0);
+    int y = map(touch.y, TS_MINY, TS_MAXY, 0, 320);
     if (isButtonPressed(x, y, 300, 230, 20, 20) && arrowsDrawn) {
-      Serial.println("pen");
+      // Serial.println("pen");
     }
     if (isButtonPressed(x, y, BUTTON_X, BUTTON_Y, BUTTON_W, BUTTON_H)) {
       int numSsid = scanNearbyNetworks();
       drawNetworksPage(numSsid);
+      Serial.print("BUTTON_X ");
+      Serial.print(BUTTON_X);
+      Serial.print("BUTTON_Y ");
+      Serial.print(BUTTON_Y);
+      Serial.print("BUTTON_W ");
+      Serial.print(BUTTON_W);
+      Serial.print("BUTTON_H ");
+      Serial.print(BUTTON_H);
+      Serial.println();
     }
-    // Serial.print("x: ");
-    // Serial.print(x);
-    // Serial.print(", y: ");
-    // Serial.print(y);
+    Serial.print("x: ");
+    Serial.print(x);
+    Serial.print(", y: ");
+    Serial.print(y);
     Serial.print("touch.x: ");
     Serial.print(touch.x);
     Serial.print("touch.y: ");
     Serial.print(touch.y);
+    Serial.println();
     delay(100);
   }
 
@@ -81,7 +107,7 @@ void loop() {
 } 
 
 bool isButtonPressed(int touchX, int touchY, int buttonX, int buttonY, int buttonW, int buttonH) {
-  if ((touchX >= buttonX && touchX <= buttonX + buttonW) && (touchY >= buttonY && touchY <= buttonY + buttonH)) {
+  if (((touchX >= buttonX) && (touchX <= (buttonX + buttonW))) && ((touchY >= buttonY) && (touchY <= (buttonY + buttonH)))) {
     return true;
   }
 }
