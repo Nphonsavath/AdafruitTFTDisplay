@@ -21,10 +21,10 @@
 
 // Touchscreen calibration settings
 #define TS_MINX 0
-#define TS_MAXX 240
+#define TS_MAXX 320
 #define TS_MINY 0
-#define TS_MAXY 320
-#define TS_THRESHOLD 200
+#define TS_MAXY 240
+#define TS_THRESHOLD 300
 
 #define BUTTON_X 35
 #define BUTTON_Y 50
@@ -32,6 +32,7 @@
 #define BUTTON_H 50
 #define MAX_SSID_LENGTH 12
 
+bool arrowsDrawn = false;
 int arduinoState = 0;
 int networkPage = 0;
 
@@ -54,13 +55,24 @@ void loop() {
   TSPoint touch = ts.getPoint();
   
   if (touch.z > TS_THRESHOLD) {
-    int x = map(touch.x, TS_MINX, TS_MAXX, 0, tft.width());
-    int y = map(touch.y, TS_MINY, TS_MAXY, 0, tft.height());
+    int x = map(touch.x, TS_MINX, TS_MAXX, 0, 320);
+    int y = map(touch.y, TS_MINY, TS_MAXY, 0, 240);
+    if (isButtonPressed(x, y, 300, 230, 20, 20) && arrowsDrawn) {
+      Serial.println("pen");
+    }
     if (isButtonPressed(x, y, BUTTON_X, BUTTON_Y, BUTTON_W, BUTTON_H)) {
       int numSsid = scanNearbyNetworks();
       drawNetworksPage(numSsid);
     }
-    delay(500);
+    // Serial.print("x: ");
+    // Serial.print(x);
+    // Serial.print(", y: ");
+    // Serial.print(y);
+    Serial.print("touch.x: ");
+    Serial.print(touch.x);
+    Serial.print("touch.y: ");
+    Serial.print(touch.y);
+    delay(100);
   }
 
   // Refresh network list every 30 seconds
@@ -111,6 +123,18 @@ void printMACAddress() {
   printMacAddressToTFT(mac);
 }
 
+void drawRightArrow(int x, int y, int size) {
+  tft.drawLine(x, y, x + size, y, ILI9341_WHITE); // Horizontal line
+  tft.drawLine(x + size, y, x + size - size / 2, y - size / 2, ILI9341_WHITE); // Top diagonal line
+  tft.drawLine(x + size, y, x + size - size / 2, y + size / 2, ILI9341_WHITE); // Bottom diagonal line
+}
+
+void drawLeftArrow(int x, int y, int size) {
+  tft.drawLine(x, y, x - size, y, ILI9341_WHITE); // Horizontal line
+  tft.drawLine(x - size, y, x - size + size / 2, y - size / 2, ILI9341_WHITE); // Top diagonal line
+  tft.drawLine(x - size, y, x - size + size / 2, y + size / 2, ILI9341_WHITE); // Bottom diagonal line
+}
+
 void drawNetworksPage(int numSsid) {
   drawTitle();
   if (networkPage == 0) {
@@ -129,8 +153,9 @@ void drawNetworksPage(int numSsid) {
       tft.setCursor(233, 85 + offset);
       printEncryptionTypeToTFT(WiFi.encryptionType(thisNet));
     }
+    drawRightArrow(300, 230, 20);
+    arrowsDrawn = true;
   }
-  
 }
 
 void drawButton(int x, int y, int buttonX, int buttonY, int buttonW, int buttonH, int textColour, int textSize, String text) {
