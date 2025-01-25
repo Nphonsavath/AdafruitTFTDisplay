@@ -46,6 +46,9 @@ void setup() {
   while (!Serial) {
     ;
   }
+  for (int i = 0; i < 20; i++) {
+    Serial.println();
+  }
   if (arduinoState == 0) {
     initializeNetworkPage();
   }
@@ -71,34 +74,36 @@ void loop() {
     // Serial.print(map(screen_height, 0, touch.y, 0, screen_height));
     // Serial.println();
 
-    int x = map(touch.x, TS_MINX, TS_MAXX, 240, 0);
-    int y = map(touch.y, TS_MINY, TS_MAXY, 0, 320);
+    // int x = map(touch.x, TS_MINX, TS_MAXX, 320, 0);
+    // int y = map(touch.y, TS_MINY, TS_MAXY, 0, 240);
+    int y = map(touch.x, TS_MINY, TS_MAXY, 240, 0); // Y-axis maps to display X
+    int x = map(touch.y, TS_MINX, TS_MAXX, 0, 320); // X-axis maps to display Y
     if (isButtonPressed(x, y, 300, 230, 20, 20) && arrowsDrawn) {
-      // Serial.println("pen");
+      Serial.println("pen");
     }
-    if (isButtonPressed(x, y, BUTTON_X, BUTTON_Y, BUTTON_W, BUTTON_H)) {
+    if (((x >= BUTTON_X) && (x <= (BUTTON_X + BUTTON_W))) && ((y >= BUTTON_Y) && (y <= (BUTTON_Y + BUTTON_H)))) {
       int numSsid = scanNearbyNetworks();
       drawNetworksPage(numSsid);
-      Serial.print("BUTTON_X ");
-      Serial.print(BUTTON_X);
-      Serial.print("BUTTON_Y ");
-      Serial.print(BUTTON_Y);
-      Serial.print("BUTTON_W ");
-      Serial.print(BUTTON_W);
-      Serial.print("BUTTON_H ");
-      Serial.print(BUTTON_H);
-      Serial.println();
+      // Serial.print(" BUTTON_X ");
+      // Serial.print(BUTTON_X);
+      // Serial.print(" BUTTON_Y ");
+      // Serial.print(BUTTON_Y);
+      // Serial.print(" BUTTON_W ");
+      // Serial.print(BUTTON_W);
+      // Serial.print("BUTTON_H ");
+      // Serial.print(BUTTON_H);
+      // Serial.println();
     }
-    Serial.print("x: ");
-    Serial.print(x);
-    Serial.print(", y: ");
-    Serial.print(y);
-    Serial.print("touch.x: ");
-    Serial.print(touch.x);
-    Serial.print("touch.y: ");
-    Serial.print(touch.y);
-    Serial.println();
-    delay(100);
+    // Serial.print("x: ");
+    // Serial.print(x);
+    // Serial.print(", y: ");
+    // Serial.print(y);
+    // Serial.print("touch.x: ");
+    // Serial.print(touch.x);
+    // Serial.print("touch.y: ");
+    // Serial.print(touch.y);
+    // Serial.println();
+    delay(500);
   }
 
   // Refresh network list every 30 seconds
