@@ -34,7 +34,9 @@
 
 bool arrowsDrawn = false;
 int arduinoState = 0;
-int networkPage = 0;
+int networkPage = 1;
+int numSsid = 0;
+bool isNetworkPage2Drawn = false;
 
 // Create display object
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RESET, TFT_MISO);
@@ -60,30 +62,20 @@ void loop() {
   if (touch.z > TS_THRESHOLD) {
     int screen_width = tft.width();  // Example: 240 (for ILI9341)
     int screen_height = tft.height(); // Example: 320 (for ILI9341)
-    // Serial.print("Screen_width: ");
-    // Serial.print(screen_width);
-    // Serial.print(" Screen_height: ");
-    // Serial.print(screen_height);
-    // Serial.print(" TS_MINX: ");
-    // Serial.print(map(0, screen_width, touch.x, 0, screen_width));
-    // Serial.print(" TS_MAXX: ");
-    // Serial.print(map(screen_width, 0, touch.x, 0, screen_width));
-    // Serial.print(" TS_MINY: ");
-    // Serial.print(map(0, screen_height, touch.y, 0, screen_height));
-    // Serial.print(" TS_MAXY: ");
-    // Serial.print(map(screen_height, 0, touch.y, 0, screen_height));
-    // Serial.println();
-
-    // int x = map(touch.x, TS_MINX, TS_MAXX, 320, 0);
-    // int y = map(touch.y, TS_MINY, TS_MAXY, 0, 240);
+    
     int y = map(touch.x, TS_MINY, TS_MAXY, 240, 0); // Y-axis maps to display X
     int x = map(touch.y, TS_MINX, TS_MAXX, 0, 320); // X-axis maps to display Y
-    if (isButtonPressed(x, y, 300, 230, 20, 20) && arrowsDrawn) {
-      Serial.println("pen");
-    }
-    if (((x >= BUTTON_X) && (x <= (BUTTON_X + BUTTON_W))) && ((y >= BUTTON_Y) && (y <= (BUTTON_Y + BUTTON_H)))) {
-      int numSsid = scanNearbyNetworks();
-      drawNetworksPage(numSsid);
+    Serial.println(networkPage);
+    
+    if (networkPage == 1) {
+      if (isButtonPressed(x, y, 300, 230, 20, 20) && arrowsDrawn) {
+        networkPage = 2;
+        tft.fillScreen(ILI9341_BLACK);
+      }
+  
+      if (((x >= BUTTON_X) && (x <= (BUTTON_X + BUTTON_W))) && ((y >= BUTTON_Y) && (y <= (BUTTON_Y + BUTTON_H)))) {
+        numSsid = scanNearbyNetworks();
+        drawNetworksPage1(numSsid);
       // Serial.print(" BUTTON_X ");
       // Serial.print(BUTTON_X);
       // Serial.print(" BUTTON_Y ");
@@ -93,7 +85,28 @@ void loop() {
       // Serial.print("BUTTON_H ");
       // Serial.print(BUTTON_H);
       // Serial.println();
+      }
     }
+
+    if (networkPage == 2) {
+      if (!isNetworkPage2Drawn) {
+        Serial.println(" numSsid: ");
+        Serial.println(numSsid);
+        drawNetworksPage2(numSsid);
+        isNetworkPage2Drawn = true;
+      } else if (isButtonPressed(x, y, 300, 230, 20, 20) && arrowsDrawn) {
+        networkPage = 3;
+        tft.fillScreen(ILI9341_BLACK);
+        isNetworkPage2Drawn = false;
+      }
+    }
+
+    if (networkPage == 3) {
+      Serial.println(" numSsid: ");
+      Serial.println(numSsid);
+      drawNetworksPage3(numSsid);
+    }
+    
     // Serial.print("x: ");
     // Serial.print(x);
     // Serial.print(", y: ");
@@ -166,27 +179,72 @@ void drawLeftArrow(int x, int y, int size) {
   tft.drawLine(x - size, y, x - size + size / 2, y + size / 2, ILI9341_WHITE); // Bottom diagonal line
 }
 
-void drawNetworksPage(int numSsid) {
+void drawNetworksPage1(int numSsid) {
+  //tft.fillScreen(ILI9341_BLACK);
+  drawButton(45, 55, BUTTON_X, BUTTON_Y-5, BUTTON_W, BUTTON_H-10, ILI9341_BLUE, 3, "Scan Networks");
   drawTitle();
-  if (networkPage == 0) {
-    for (int thisNet = 0; thisNet < 3; thisNet++) {
-      int offset = ((thisNet+1)*45);
-      String wifiName = WiFi.SSID(thisNet);
-      if (wifiName.length() > MAX_SSID_LENGTH) {
-        wifiName = wifiName.substring(0, MAX_SSID_LENGTH) + "...";
-      }
-      drawButton(45, 75 + offset, BUTTON_X, 60 + offset, BUTTON_W, BUTTON_H-10, ILI9341_DARKGREY, 2, wifiName);
-      tft.setTextColor(ILI9341_CYAN); //prints network encription
-      tft.setTextSize(1);
-      tft.setCursor(233, 70 + offset);
-      tft.print(WiFi.RSSI(thisNet)); //prints network signal strength
-      tft.print(" dBm");
-      tft.setCursor(233, 85 + offset);
-      printEncryptionTypeToTFT(WiFi.encryptionType(thisNet));
+  for (int thisNet = 0; thisNet < min(3, numSsid); thisNet++) {
+    int offset = ((thisNet+1)*45);
+    String wifiName = WiFi.SSID(thisNet);
+    if (wifiName.length() > MAX_SSID_LENGTH) {
+      wifiName = wifiName.substring(0, MAX_SSID_LENGTH) + "...";
     }
-    drawRightArrow(300, 230, 20);
-    arrowsDrawn = true;
+    drawButton(45, 75 + offset, BUTTON_X, 60 + offset, BUTTON_W, BUTTON_H-10, ILI9341_DARKGREY, 2, wifiName);
+    tft.setTextColor(ILI9341_CYAN); //prints network encription
+    tft.setTextSize(1);
+    tft.setCursor(233, 70 + offset);
+    tft.print(WiFi.RSSI(thisNet)); //prints network signal strength
+    tft.print(" dBm");
+    tft.setCursor(233, 85 + offset);
+    printEncryptionTypeToTFT(WiFi.encryptionType(thisNet));
   }
+  drawRightArrow(300, 230, 20);
+  arrowsDrawn = true;
+}
+
+void drawNetworksPage2(int numSsid) {
+  drawTitle();
+  printMACAddress();
+  for (int thisNet = 3; thisNet < min(7, numSsid); thisNet++) {
+    Serial.println(thisNet);
+    int offset = ((thisNet-3)*45);
+    String wifiName = WiFi.SSID(thisNet);
+    if (wifiName.length() > MAX_SSID_LENGTH) {
+      wifiName = wifiName.substring(0, MAX_SSID_LENGTH) + "...";
+    }
+    drawButton(45, 65 + offset, BUTTON_X, 50 + offset, BUTTON_W, BUTTON_H-10, ILI9341_DARKGREY, 2, wifiName);
+    tft.setTextColor(ILI9341_CYAN); //prints network encription
+    tft.setTextSize(1);
+    tft.setCursor(233, 60 + offset);
+    tft.print(WiFi.RSSI(thisNet)); //prints network signal strength
+    tft.print(" dBm");
+    tft.setCursor(233, 75 + offset);
+    printEncryptionTypeToTFT(WiFi.encryptionType(thisNet));
+  }
+  drawRightArrow(300, 230, 20);
+  drawLeftArrow(20, 230, 20);
+}
+
+void drawNetworksPage3(int numSsid) {
+  drawTitle();
+  printMACAddress();
+  for (int thisNet = 7; thisNet < min(10, numSsid); thisNet++) {
+    Serial.println(thisNet);
+    int offset = ((thisNet-7)*45);
+    String wifiName = WiFi.SSID(thisNet);
+    if (wifiName.length() > MAX_SSID_LENGTH) {
+      wifiName = wifiName.substring(0, MAX_SSID_LENGTH) + "...";
+    }
+    drawButton(45, 65 + offset, BUTTON_X, 50 + offset, BUTTON_W, BUTTON_H-10, ILI9341_DARKGREY, 2, wifiName);
+    tft.setTextColor(ILI9341_CYAN); //prints network encription
+    tft.setTextSize(1);
+    tft.setCursor(233, 15 + offset);
+    tft.print(WiFi.RSSI(thisNet)); //prints network signal strength
+    tft.print(" dBm");
+    tft.setCursor(233, 30 + offset);
+    printEncryptionTypeToTFT(WiFi.encryptionType(thisNet));
+  }
+  drawLeftArrow(20, 230, 20);
 }
 
 void drawButton(int x, int y, int buttonX, int buttonY, int buttonW, int buttonH, int textColour, int textSize, String text) {
